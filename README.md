@@ -1,5 +1,5 @@
 # <img src="./assets/logo.png" alt="Open Huff" height="60px">
-[![doc](https://img.shields.io/badge/docs-here-blue)](https://docs.open-huff.org) ![license](https://img.shields.io/github/license/Yashiru/open-huff.svg) ![coverage](https://img.shields.io/badge/coverage-0-red) ![solidity](https://img.shields.io/badge/solidity-^0.8.16-lightgrey)
+[![doc](https://img.shields.io/badge/docs-here-blue)](https://docs.openhuff.com/) ![license](https://img.shields.io/github/license/Yashiru/open-huff.svg) ![coverage](https://img.shields.io/badge/coverage-0-red) ![solidity](https://img.shields.io/badge/solidity-^0.8.16-lightgrey)
 
 A library for secure [Huff](https://github.com/huff-language/huff-rs) smart contract development. Directly inspired by [OpenZeppelin contracts](https://github.com/OpenZeppelin/openzeppelin-contracts), this library is an implementation of the openzeppelin's concepts, written in [Huff](https://github.com/huff-language/huff-rs) and thus much more economic in terms of gas usage.
 
