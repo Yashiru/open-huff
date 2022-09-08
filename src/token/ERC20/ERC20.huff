@@ -1,0 +1,76 @@
+#define function totalSupply() nonpayable returns (uint256)
+#define function balanceOf(address account) nonpayable returns (uint256)
+#define function transfer(address to, uint256 amount) nonpayable returns (bool)
+#define function allowance(address owner, address spender) nonpayable returns (uint256)
+#define function approve(address spender, uint256 amount) nonpayable returns (bool)
+#define function transferFrom(address from,address to,uint256 amount) nonpayable returns (bool)
+
+#define event Transfer(address indexed from, address indexed to, uint256 value)
+#define event Approval(address indexed owner, address indexed spender, uint256 value)
+
+#define macro MAIN() = takes(0) returns(0) {
+    // Get the function selector
+    0x00
+    calldataload
+    0xE0
+    shr
+
+    // Jump to the right bytecode according the calldata selector
+    dup1 __FUNC_SIG(totalSupply) eq totalSupply jumpi
+    dup1 __FUNC_SIG(balanceOf) eq balanceOf jumpi
+    dup1 __FUNC_SIG(transfer) eq transfer jumpi
+    dup1 __FUNC_SIG(allowance) eq allowance jumpi
+    dup1 __FUNC_SIG(approve) eq approve jumpi
+    __FUNC_SIG(transferFrom) eq transferFrom jumpi
+
+    // Jump destinations
+    totalSupply:
+        TOTAL_SUPPLY()
+    balanceOf:
+        BALANCE_OF()
+    transfer:
+        TRANSFER()
+    allowance:
+        ALLOWANCE()
+    approve:
+        APPROVE()
+    transferFrom:
+        TRANSFER_FROM()
+}
+
+
+#define macro TOTAL_SUPPLY() = takes(0) returns(0){
+    0x01 0x00 mstore
+    
+    0x20 0x00 return
+}
+
+#define macro BALANCE_OF() = takes(0) returns(0){
+    0x02 0x00 mstore
+    
+    0x20 0x00 return
+}
+
+#define macro TRANSFER() = takes(0) returns(0){
+    0x00 0x00 mstore
+    
+    0x20 0x00 return
+}
+
+#define macro ALLOWANCE() = takes(0) returns(0){
+    0x03 0x00 mstore
+    
+    0x20 0x00 return
+}
+
+#define macro APPROVE() = takes(0) returns(0){
+    0x00 0x00 mstore
+    
+    0x20 0x00 return
+}
+
+#define macro TRANSFER_FROM() = takes(0) returns(0){
+    0x00 0x00 mstore
+    
+    0x20 0x00 return
+}
