@@ -28,13 +28,13 @@ Open Huff Contracts exists thanks to its contributors. There are many ways you c
 
 ### Requirements
 
-The following will need to be installed in order to use this template. Please follow the links and instructions.
+The following will need to be installed in order to work on this project. Please follow the links and instructions.
 
 -   [Foundry / Foundryup](https://github.com/gakonst/foundry)
     -   This will install `forge`, `cast`, and `anvil`
     -   To get the latest of each, just run `foundryup`
 -   [Huff Compiler](https://docs.huff.sh/get-started/installing/)
-    -   You'll know you've done it right if you can run `huffc --version` and get an output like: `huffc 0.2.0`
+    -   You'll know you've done it right if you can run `huffc --version` and get an output like: `huffc 0.3.0`
 
 ### Quickstart
 
@@ -52,13 +52,14 @@ To build and test your contracts with [foundry](https://github.com/gakonst/found
 
 ```bash
 forge build
-forge test
+forge test # To simply run tests
+forge test -vvv # To run tests and print execution traces of failing tests
 ```
 
 To compile your contract using Huff, you can run:
 
 ```bash
-huffc ./path/to/your/contract.huff --bytecode
+huffc ./path/to/your/contract.huff
 ```
 
 For more information on how to use Foundry, check out the [Foundry Github Repository](https://github.com/foundry-rs/foundry/tree/master/forge) and the [foundry-huff library repository](https://github.com/huff-language/foundry-huff).
