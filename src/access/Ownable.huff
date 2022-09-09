@@ -22,6 +22,12 @@
     [OWNER_POINTER] sload
 }
 
+#define macro OWNER() = takes(0) returns(0) {
+    OWNABLE_GET_OWNER()         // [address]
+    0x00 mstore                 // []
+    0x20 0x00 return 
+}
+
 #define macro ONLY_OWNER() = takes(0) returns(0) {
 	[OWNER_POINTER] sload caller eq dup1 is_owner jumpi
         0x20
