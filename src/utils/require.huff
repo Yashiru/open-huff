@@ -1,17 +1,12 @@
-#define error RquireError(string)
-
 #define macro REQUIRE() = takes (3) returns (0) {
     // Input stack:          [condition, message_length, message]
     continue jumpi        // [message_length, message]
 
-    __ERROR(RquireError)  // [error_selector, message_length, message]
-    0x00 mstore           // [message_length, message]
-    0x20 0x04 mstore      // [message_length, message]
-    0x24 mstore           // [message]
-    0x44 mstore           // []
+    0x00 mstore           // [message]
+    0x20 mstore           // []
 
-    0x64 0x00 revert
+    0x40 0x00 revert
 
     continue:
-        pop               // []
+        pop pop           // []
 }
