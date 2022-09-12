@@ -4,6 +4,7 @@ interface IERC20 {
 	function allowance(address, address) external view returns (uint256);
 	function approve(address, uint256) external;
 	function balanceOf(address) external view returns (uint256);
+	function decimals() external view returns (uint256);
 	function mint(address, uint256) external;
 	function owner() external view returns (address);
 	function totalSupply() external view returns (uint256);

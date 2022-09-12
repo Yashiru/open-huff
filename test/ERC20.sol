@@ -9,32 +9,34 @@ import {IERC20} from "../src/token/ERC20/IERC20.sol";
 
 contract ERC20 is Test {
     /// @dev Address of the SimpleStore contract.  
-    IERC20 public usdc;
-    address public usdcOwner;
+    IERC20 public dai;
+    address public daiOwner;
     uint256 defaultWhaleBalance = 1000000000 ether;
-    address public usdcWhale = makeAddr("USDC Whale");
-    address public usdcReceiver = makeAddr("USDC receiver");
+    address public daiWhale = makeAddr("USDC Whale");
+    address public daiReceiver = makeAddr("USDC receiver");
+
+    uint256 daiDecimals = 18;
 
     /// @dev Setup the testing environment.
     function setUp() public {
         string memory name = "USD coin";
         string memory symbol = "USDC";
-        usdc = IERC20(HuffDeployer.deploy("token/ERC20/ERC20"));
-        usdcOwner = usdc.owner();
+        dai = IERC20(HuffDeployer.deploy("token/ERC20/ERC20"));
+        daiOwner = dai.owner();
 
-        vm.prank(usdcOwner);
-        usdc.mint(usdcWhale, defaultWhaleBalance);
+        vm.prank(daiOwner);
+        dai.mint(daiWhale, defaultWhaleBalance);
     }
 
     function testMint() public returns (uint256 mintedAmount){
         mintedAmount = 1000 ether;
 
-        vm.startPrank(usdcOwner);
+        vm.startPrank(daiOwner);
 
-        uint256 oldBalance = usdc.balanceOf(usdcOwner);
+        uint256 oldBalance = dai.balanceOf(daiOwner);
 
-        usdc.mint(usdcOwner, mintedAmount);
-        uint256 newBalance = usdc.balanceOf(usdcOwner);
+        dai.mint(daiOwner, mintedAmount);
+        uint256 newBalance = dai.balanceOf(daiOwner);
         
         assertEq(newBalance, oldBalance+mintedAmount);
         
@@ -43,62 +45,66 @@ contract ERC20 is Test {
 
     function testTotalSupply() public {
         uint256 expectedSupply = testMint() + defaultWhaleBalance;
-        uint256 supply = usdc.totalSupply();
+        uint256 supply = dai.totalSupply();
         assertEq(supply, expectedSupply);
     }
 
     function testBalanceOf() public {
-        uint256 oldBalance = usdc.balanceOf(usdcOwner);
+        uint256 oldBalance = dai.balanceOf(daiOwner);
         assertEq(oldBalance, 0);
 
         uint256 mintedAmount = testMint();
 
-        assertEq(usdc.balanceOf(usdcOwner), mintedAmount);
+        assertEq(dai.balanceOf(daiOwner), mintedAmount);
 
         mintedAmount = testMint();
 
-        assertEq(usdc.balanceOf(usdcOwner), mintedAmount*2);
+        assertEq(dai.balanceOf(daiOwner), mintedAmount*2);
     }
 
     function testTransfer() public {
-        assertEq(usdc.balanceOf(usdcWhale), defaultWhaleBalance);
+        assertEq(dai.balanceOf(daiWhale), defaultWhaleBalance);
 
-        uint256 oldSenderBalance = usdc.balanceOf(usdcWhale);
-        uint256 oldReceiverBalance = usdc.balanceOf(usdcReceiver);
+        uint256 oldSenderBalance = dai.balanceOf(daiWhale);
+        uint256 oldReceiverBalance = dai.balanceOf(daiReceiver);
         uint256 sendValue = 100 ether;
         
-        vm.prank(usdcWhale);
-        usdc.transfer(usdcReceiver, sendValue);
+        vm.prank(daiWhale);
+        dai.transfer(daiReceiver, sendValue);
 
-        assertEq(usdc.balanceOf(usdcReceiver), oldReceiverBalance + sendValue);
-        assertEq(usdc.balanceOf(usdcWhale), oldSenderBalance - sendValue);
+        assertEq(dai.balanceOf(daiReceiver), oldReceiverBalance + sendValue);
+        assertEq(dai.balanceOf(daiWhale), oldSenderBalance - sendValue);
     }
 
     function testTransferFrom() public {
-        assertEq(usdc.balanceOf(usdcWhale), defaultWhaleBalance);
+        assertEq(dai.balanceOf(daiWhale), defaultWhaleBalance);
 
-        uint256 oldSenderBalance = usdc.balanceOf(usdcWhale);
-        uint256 oldReceiverBalance = usdc.balanceOf(usdcReceiver);
+        uint256 oldSenderBalance = dai.balanceOf(daiWhale);
+        uint256 oldReceiverBalance = dai.balanceOf(daiReceiver);
         uint256 sendValue = 100 ether;
         
-        vm.prank(usdcWhale);
-        usdc.approve(address(this), type(uint256).max);
+        vm.prank(daiWhale);
+        dai.approve(address(this), type(uint256).max);
 
-        usdc.transferFrom(usdcWhale, usdcReceiver, sendValue);
+        dai.transferFrom(daiWhale, daiReceiver, sendValue);
 
-        assertEq(usdc.balanceOf(usdcReceiver), oldReceiverBalance + sendValue);
-        assertEq(usdc.balanceOf(usdcWhale), oldSenderBalance - sendValue);
+        assertEq(dai.balanceOf(daiReceiver), oldReceiverBalance + sendValue);
+        assertEq(dai.balanceOf(daiWhale), oldSenderBalance - sendValue);
     }
 
     function testApprove() public {
-        vm.startPrank(usdcWhale);
+        vm.startPrank(daiWhale);
 
-        usdc.approve(address(this), type(uint256).max);
-        assertEq(usdc.allowance(usdcWhale, address(this)), type(uint256).max);
+        dai.approve(address(this), type(uint256).max);
+        assertEq(dai.allowance(daiWhale, address(this)), type(uint256).max);
 
-        usdc.approve(address(this), 0);
-        assertEq(usdc.allowance(usdcWhale, address(this)), 0);
+        dai.approve(address(this), 0);
+        assertEq(dai.allowance(daiWhale, address(this)), 0);
         
         vm.stopPrank();
+    }
+
+    function testDecimals() public {
+        assertEq(dai.decimals(), 18);
     }
 }

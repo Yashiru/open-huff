@@ -9,14 +9,18 @@
 #include "../../utils/Require.huff"
 
 /* Interface */
+// Only owner
 #define function mint(address,uint256) nonpayable returns ()
+// Public 
 #define function transfer(address,uint256) nonpayable returns ()
 #define function transferFrom(address,address,uint256) nonpayable returns ()
 #define function approve(address,uint256) nonpayable returns ()
+// Views
 #define function balanceOf(address) view returns (uint256)
 #define function allowance(address,address) view returns (uint256)
 #define function totalSupply() view returns (uint256)
 #define function owner() view returns (address)
+#define function decimals() view returns (uint256)
 
 /* Events */
 #define event Transfer(address,address,uint256)
@@ -25,6 +29,7 @@
 /* Events Signatures */
 #define constant TRANSFER_EVENT_SIGNATURE = 0xDDF252AD1BE2C89B69C2B068FC378DAA952BA7F163C4A11628F55A4DF523B3EF
 #define constant APPROVAL_EVENT_SIGNATURE = 0x8C5BE1E5EBEC7D5BD14F71427D1E84F3DD0314C0F7B2291E5B200AC8C7C3B925
+#define constant DECIMALS = 0x12
 
 /* Storage Slots */
 #define constant BALANCE_POINTER = FREE_STORAGE_POINTER()
@@ -77,6 +82,22 @@
     // Store the allowance in memory 
     0x00 mstore
     // Return the first 32 bytes of memory
+    0x20 0x00 return
+}
+
+/// @dev Returns the number of decimals used to get its user representation.
+///      For example, if `decimals` equals `2`, a balance of `505` tokens should
+///      be displayed to a user as `5.05` (`505 / 10 ** 2`).
+///      
+///      Tokens usually opt for a value of 18, imitating the relationship between
+///      Ether and Wei. This is the value {ERC20} uses, unless this function is
+///      overridden;
+///      
+///      NOTE: This information is only used for _display_ purposes: it in
+///      no way affects any of the arithmetic of the contract, including
+///      {IERC20-balanceOf} and {IERC20-transfer}.
+#define macro DECIMALS() = takes (0) returns (0) {
+    [DECIMALS] 0x00 mstore
     0x20 0x00 return
 }
 
@@ -237,6 +258,7 @@
     dup1 __FUNC_SIG(totalSupply) eq totalSupply jumpi
     dup1 __FUNC_SIG(approve) eq approve jumpi
     dup1 __FUNC_SIG(allowance) eq allowance jumpi
+    dup1 __FUNC_SIG(decimals) eq decimals jumpi
     /* Ownable JumpDest */
     __FUNC_SIG(owner) eq owner jumpi
 
@@ -255,6 +277,8 @@
         APPROVE()
     allowance:
         ALLOWANCE()
+    decimals:
+        DECIMALS()
 
     /* Ownable JumpDest */
     owner:
