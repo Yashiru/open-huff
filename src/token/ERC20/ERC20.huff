@@ -6,6 +6,7 @@
 #include "../../access/Ownable.huff"
 #include "../../utils/Address.huff"
 #include "../../utils/Map.huff"
+#include "../../utils/Require.huff"
 
 /* Interface */
 #define function mint(address,uint256) nonpayable returns ()
