@@ -9,17 +9,15 @@
 
 /* Interface */
 #define function mint(address,uint256) nonpayable returns ()
-
 #define function transfer(address,uint256) nonpayable returns ()
 #define function transferFrom(address,address,uint256) nonpayable returns ()
 #define function approve(address,uint256) nonpayable returns ()
-
 #define function balanceOf(address) view returns (uint256)
 #define function allowance(address,address) view returns (uint256)
 #define function totalSupply() view returns (uint256)
-
 #define function owner() view returns (address)
 
+/* Events */
 #define event Transfer(address,address,uint256)
 #define event Approve(address,address,uint256)
 
@@ -28,9 +26,9 @@
 #define constant APPROVAL_EVENT_SIGNATURE = 0x8C5BE1E5EBEC7D5BD14F71427D1E84F3DD0314C0F7B2291E5B200AC8C7C3B925
 
 /* Storage Slots */
-#define constant BALANCE_LOCATION = FREE_STORAGE_POINTER()
-#define constant ALLOWANCE_LOCATION = FREE_STORAGE_POINTER()
-#define constant TOTAL_SUPPLY_LOCATION = FREE_STORAGE_POINTER()
+#define constant BALANCE_POINTER = FREE_STORAGE_POINTER()
+#define constant ALLOWANCE_POINTER = FREE_STORAGE_POINTER()
+#define constant TOTAL_SUPPLY_POINTER = FREE_STORAGE_POINTER()
 
 /* Constructor */
 #define macro CONSTRUCTOR() = takes(0) returns (0) {
@@ -46,7 +44,7 @@
     // Load the address in stack
     0x04 calldataload                               // [address]
     // Load the balance of the account
-    [BALANCE_LOCATION] LOAD_ELEMENT_FROM_KEYS(0x00) // [balance]
+    [BALANCE_POINTER] LOAD_ELEMENT_FROM_KEYS(0x00) // [balance]
     // Store the balance in memory
     0x00 mstore                                     // []
     // Return the first 32 bytes of the memory
@@ -56,7 +54,7 @@
 /// @dev Get the total supply
 #define macro TOTAL_SUPPLY() = takes (0) returns (0) {
     // Load the total supply
-    [TOTAL_SUPPLY_LOCATION] sload   // [supply]
+    [TOTAL_SUPPLY_POINTER] sload   // [supply]
     // Store total supply in memory
     0x00 mstore                     // []
     // Return the first 32 bytes of memory
@@ -89,7 +87,7 @@
     // Ensure that the sender has a sufficient balance.
     // input stack: [value, from, to]
     dup2                // [from, value, from, to]
-    [BALANCE_LOCATION] LOAD_ELEMENT_FROM_KEYS(0x00)  // [balance, value, from, to]
+    [BALANCE_POINTER] LOAD_ELEMENT_FROM_KEYS(0x00)  // [balance, value, from, to]
     dup1                // [balance, balance, value, from, to]
     dup3                // [value, balance, balance, value, from, to]
     gt 0x0 eq           // [value>balance, balance, value, from, to]              
@@ -104,7 +102,7 @@
     swap1               // [balance, value, value, from, to]
     sub                 // [balance - value, value, from, to]
     dup3                // [from, balance-value, value, from, to]
-    [BALANCE_LOCATION] STORE_ELEMENT_FROM_KEYS(0x00) // [value, from, to]
+    [BALANCE_POINTER] STORE_ELEMENT_FROM_KEYS(0x00) // [value, from, to]
 }
 
 /// @dev Increase balance of an account according to 
@@ -116,10 +114,10 @@
     dup3                // [to, value, from, to]
     dup2                // [value, to, value, from, to]
     swap1               // [to, value, value, from, to]
-    [BALANCE_LOCATION] LOAD_ELEMENT_FROM_KEYS(0x00)  // [balance, value, value, from, to]
+    [BALANCE_POINTER] LOAD_ELEMENT_FROM_KEYS(0x00)  // [balance, value, value, from, to]
     add                 // [balance+value, value, from, to]
     dup4                // [to, balance+value, value, from, to]
-    [BALANCE_LOCATION] STORE_ELEMENT_FROM_KEYS(0x00) // [value, from, to]
+    [BALANCE_POINTER] STORE_ELEMENT_FROM_KEYS(0x00) // [value, from, to]
 }
 
 /// @dev Set the allowance of an owner towards a spender.
@@ -213,9 +211,9 @@
 
     // Update totalSupply
     dup1                            // [value, value, from, to]
-    [TOTAL_SUPPLY_LOCATION] sload    // [supply,value,value,from,to]
+    [TOTAL_SUPPLY_POINTER] sload    // [supply,value,value,from,to]
     add                             // [supply+value,value,from,to]
-    [TOTAL_SUPPLY_LOCATION] sstore  // [value,from,to]
+    [TOTAL_SUPPLY_POINTER] sstore  // [value,from,to]
 
 
     // Emit the transfer event.
