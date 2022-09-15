@@ -12,16 +12,23 @@ contract ERC20 is Test {
     IERC20 public dai;
     address public daiOwner;
     uint256 defaultWhaleBalance = 1000000000 ether;
-    address public daiWhale = makeAddr("USDC Whale");
-    address public daiReceiver = makeAddr("USDC receiver");
+    address public daiWhale = makeAddr("DAI Whale");
+    address public daiReceiver = makeAddr("DAI receiver");
+
+    string constant name = "Dai Stablecoin";
+    string constant symbol = "DAI";
 
     uint256 daiDecimals = 18;
 
     /// @dev Setup the testing environment.
     function setUp() public {
-        string memory name = "USD coin";
-        string memory symbol = "USDC";
-        dai = IERC20(HuffDeployer.deploy("token/ERC20/ERC20"));
+        dai = IERC20(HuffDeployer.deploy_with_args(
+            "token/ERC20/ERC20", 
+            abi.encode(
+                name,
+                symbol
+            )
+        ));
         daiOwner = dai.owner();
 
         vm.prank(daiOwner);
@@ -106,5 +113,13 @@ contract ERC20 is Test {
 
     function testDecimals() public {
         assertEq(dai.decimals(), 18);
+    }
+
+    function testName() public {
+        assertEq(dai.name(), name);
+    }
+
+    function testSymbol() public {
+        assertEq(dai.symbol(), symbol);
     }
 }

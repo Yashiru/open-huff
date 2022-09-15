@@ -21,6 +21,8 @@
 #define function totalSupply() view returns (uint256)
 #define function owner() view returns (address)
 #define function decimals() view returns (uint256)
+#define function name() view returns (string)
+#define function symbol() view returns (string)
 
 /* Events */
 #define event Transfer(address,address,uint256)
@@ -36,10 +38,45 @@
 #define constant ALLOWANCE_POINTER = FREE_STORAGE_POINTER()
 #define constant TOTAL_SUPPLY_POINTER = FREE_STORAGE_POINTER()
 
+#define constant NAME_POINTER = FREE_STORAGE_POINTER()
+#define constant NAME_LENGTH_POINTER = FREE_STORAGE_POINTER()
+
+#define constant SYMBOL_POINTER = FREE_STORAGE_POINTER()
+#define constant SYMBOL_LENGTH_POINTER = FREE_STORAGE_POINTER()
+
 /* Constructor */
 #define macro CONSTRUCTOR() = takes(0) returns (0) {
     // Set msg.sender as the owner of the contract.
     OWNABLE_CONSTRUCTOR()
+
+    0x20                        // [size] - byte size to copy \n"
+    0x80 codesize sub           // [offset, size] - offset in the code to copy from\n "
+    0x00                        // [mem, offset, size] - offset in memory to copy to \n"
+    codecopy                    // [] \n"
+    0x00 mload                  // [arg] \n"
+    [NAME_LENGTH_POINTER] sstore
+
+    0x20                        // [size] - byte size to copy \n"
+    0x60 codesize sub           // [offset, size] - offset in the code to copy from\n "
+    0x00                        // [mem, offset, size] - offset in memory to copy to \n"
+    codecopy                    // [] \n"
+    0x00 mload                  // [arg] \n"
+    [NAME_POINTER] sstore
+
+
+    0x20                        // [size] - byte size to copy \n"
+    0x40 codesize sub           // [offset, size] - offset in the code to copy from\n "
+    0x00                        // [mem, offset, size] - offset in memory to copy to \n"
+    codecopy                    // [] \n"
+    0x00 mload                  // [arg] \n"
+    [SYMBOL_LENGTH_POINTER] sstore
+
+    0x20                        // [size] - byte size to copy \n"
+    0x20 codesize sub           // [offset, size] - offset in the code to copy from\n "
+    0x00                        // [mem, offset, size] - offset in memory to copy to \n"
+    codecopy                    // [] \n"
+    0x00 mload                  // [arg] \n"
+    [SYMBOL_POINTER] sstore
 }
 
 /// @dev Get the balance of an account
@@ -83,6 +120,23 @@
     0x00 mstore
     // Return the first 32 bytes of memory
     0x20 0x00 return
+}
+
+/// @dev Returns the name of the token.
+#define macro NAME() = takes (0) returns (0) {
+    0x20 0x00 mstore
+    [NAME_LENGTH_POINTER] sload 0x20 mstore
+    [NAME_POINTER] sload 0x40 mstore
+    0x60 0x00 return
+}
+
+/// @dev Returns the symbol of the token, usually a shorter version of the
+///      name.
+#define macro SYMBOL() = takes (0) returns (0) {
+    0x20 0x00 mstore
+    [SYMBOL_LENGTH_POINTER] sload 0x20 mstore
+    [SYMBOL_POINTER] sload 0x40 mstore
+    0x60 0x00 return
 }
 
 /// @dev Returns the number of decimals used to get its user representation.
@@ -259,6 +313,8 @@
     dup1 __FUNC_SIG(approve) eq approve jumpi
     dup1 __FUNC_SIG(allowance) eq allowance jumpi
     dup1 __FUNC_SIG(decimals) eq decimals jumpi
+    dup1 __FUNC_SIG(name) eq name jumpi
+    dup1 __FUNC_SIG(symbol) eq symbol jumpi
     /* Ownable JumpDest */
     __FUNC_SIG(owner) eq owner jumpi
 
@@ -279,6 +335,10 @@
         ALLOWANCE()
     decimals:
         DECIMALS()
+    name:
+        NAME()
+    symbol:
+        SYMBOL()
 
     /* Ownable JumpDest */
     owner:
