@@ -9,12 +9,13 @@
 #include "../../utils/Require.huff"
 
 /* Interface */
-// Only owner
-#define function mint(address,uint256) nonpayable returns ()
 // Public 
 #define function transfer(address,uint256) nonpayable returns ()
 #define function transferFrom(address,address,uint256) nonpayable returns ()
-#define function approve(address,uint256) nonpayable returns ()
+#define function approve(address,uint256) nonpayable returns (bool)
+#define function increaseAllowance(address,uint256) nonpayable returns ()
+#define function decreaseAllowance(address,uint256) nonpayable returns ()
+
 // Views
 #define function balanceOf(address) view returns (uint256)
 #define function allowance(address,address) view returns (uint256)
@@ -50,6 +51,14 @@
     OWNABLE_CONSTRUCTOR()
 
     0x20                        // [size] - byte size to copy \n"
+    0xA0 codesize sub           // [offset, size] - offset in the code to copy from\n "
+    0x00                        // [mem, offset, size] - offset in memory to copy to \n"
+    codecopy                    // [] \n"
+    caller                      // [caller]
+    0x00 mload                  // [arg, caller] \n"
+    MINT()
+
+    0x20                        // [size] - byte size to copy \n"
     0x80 codesize sub           // [offset, size] - offset in the code to copy from\n "
     0x00                        // [mem, offset, size] - offset in memory to copy to \n"
     codecopy                    // [] \n"
@@ -79,6 +88,33 @@
     [SYMBOL_POINTER] sstore
 }
 
+/// @dev Returns the name of the token.
+#define macro NAME() = takes (0) returns (0) {
+    0x20 0x00 mstore
+    [NAME_LENGTH_POINTER] sload 0x20 mstore
+    [NAME_POINTER] sload 0x40 mstore
+    0x60 0x00 return
+}
+
+/// @dev Returns the symbol of the token, usually a shorter version of the
+///      name.
+#define macro SYMBOL() = takes (0) returns (0) {
+    0x20 0x00 mstore
+    [SYMBOL_LENGTH_POINTER] sload 0x20 mstore
+    [SYMBOL_POINTER] sload 0x40 mstore
+    0x60 0x00 return
+}
+
+/// @dev Get the total supply
+#define macro TOTAL_SUPPLY() = takes (0) returns (0) {
+    // Load the total supply
+    [TOTAL_SUPPLY_POINTER] sload   // [supply]
+    // Store total supply in memory
+    0x00 mstore                     // []
+    // Return the first 32 bytes of memory
+    0x20 0x00 return                // []
+}
+
 /// @dev Get the balance of an account
 ///
 ///      Expected calldata: `address` containing the address of the
@@ -92,16 +128,6 @@
     0x00 mstore                                     // []
     // Return the first 32 bytes of the memory
     0x20 0x00 return                                // []
-}
-
-/// @dev Get the total supply
-#define macro TOTAL_SUPPLY() = takes (0) returns (0) {
-    // Load the total supply
-    [TOTAL_SUPPLY_POINTER] sload   // [supply]
-    // Store total supply in memory
-    0x00 mstore                     // []
-    // Return the first 32 bytes of memory
-    0x20 0x00 return                // []
 }
 
 /// @dev Get the allowance of an owner towards a spender.
@@ -122,23 +148,6 @@
     0x20 0x00 return
 }
 
-/// @dev Returns the name of the token.
-#define macro NAME() = takes (0) returns (0) {
-    0x20 0x00 mstore
-    [NAME_LENGTH_POINTER] sload 0x20 mstore
-    [NAME_POINTER] sload 0x40 mstore
-    0x60 0x00 return
-}
-
-/// @dev Returns the symbol of the token, usually a shorter version of the
-///      name.
-#define macro SYMBOL() = takes (0) returns (0) {
-    0x20 0x00 mstore
-    [SYMBOL_LENGTH_POINTER] sload 0x20 mstore
-    [SYMBOL_POINTER] sload 0x40 mstore
-    0x60 0x00 return
-}
-
 /// @dev Returns the number of decimals used to get its user representation.
 ///      For example, if `decimals` equals `2`, a balance of `505` tokens should
 ///      be displayed to a user as `5.05` (`505 / 10 ** 2`).
@@ -155,47 +164,6 @@
     0x20 0x00 return
 }
 
-
-/// @dev Decrease balance of an account according to 
-///      the parent Transfer action.
-///      Simply decrease the balance of the `from`.
-#define macro TRANSFER_TAKE_FROM(error) = takes(3) returns (3) {
-    // Ensure that the sender has a sufficient balance.
-    // input stack: [value, from, to]
-    dup2                // [from, value, from, to]
-    [BALANCE_POINTER] LOAD_ELEMENT_FROM_KEYS(0x00)  // [balance, value, from, to]
-    dup1                // [balance, balance, value, from, to]
-    dup3                // [value, balance, balance, value, from, to]
-    gt 0x0 eq           // [value>balance, balance, value, from, to]              
-    0x20                // [msg length, value>balance, balance, value, from, to]              
-    0x45524332303a20616d6f756e7420657863656564732062616c616e6365000000
-    swap2               // [value>balance, require msg.len, msg, balance, value, from, to]
-    REQUIRE()  
-
-    // Update the sender's balance.
-    // input stack: [balance, value, from, to]
-    dup2                // [value, balance, value, from, to]
-    swap1               // [balance, value, value, from, to]
-    sub                 // [balance - value, value, from, to]
-    dup3                // [from, balance-value, value, from, to]
-    [BALANCE_POINTER] STORE_ELEMENT_FROM_KEYS(0x00) // [value, from, to]
-}
-
-/// @dev Increase balance of an account according to 
-///      the parent Transfer action.
-///      Simply increase the balance of the `to`.
-#define macro TRANSFER_GIVE_TO() = takes(3) returns (0) {
-    // Update the balance of the recipient.
-    // input stack: [value, from, to]
-    dup3                // [to, value, from, to]
-    dup2                // [value, to, value, from, to]
-    swap1               // [to, value, value, from, to]
-    [BALANCE_POINTER] LOAD_ELEMENT_FROM_KEYS(0x00)  // [balance, value, value, from, to]
-    add                 // [balance+value, value, from, to]
-    dup4                // [to, balance+value, value, from, to]
-    [BALANCE_POINTER] STORE_ELEMENT_FROM_KEYS(0x00) // [value, from, to]
-}
-
 /// @dev Set the allowance of an owner towards a spender.
 ///
 ///      Expected calldata: `address, uint256` with the spender first
@@ -209,7 +177,64 @@
     caller                  // [from, to, value]
 
     // Store the new allowance of the caller towards the spender
-    STORE_ELEMENT_FROM_KEYS(0x00) 
+    STORE_ELEMENT_FROM_KEYS(0x00)
+    0x01 0x00 mstore 0x20 0x00 return
+}
+
+/// @dev Atomically increases the allowance granted to `spender` by the caller.
+/// 
+///      This is an alternative to {approve} that can be used as a mitigation for
+///      problems described in {IERC20-approve}.
+/// 
+///      Emits an {Approval} event indicating the updated allowance.
+/// 
+///      Requirements:
+///         - `spender` cannot be the zero address.
+#define macro INCREASE_ALLOWANCE() = takes (0) returns (0) {
+    // Load the calldata's bytes from 4 to 36
+    0x04 calldataload dup1          // [to, to]
+    // Load the caller addres
+    caller                          // [from, to, to]
+
+    // Load the current allowance
+    LOAD_ELEMENT_FROM_KEYS(0x00)    // [allowance, to]
+
+    // Load the calldata's bytes from 36 to 68 and ADD
+    0x24 calldataload add           // [newAllowance, to]
+    swap1 caller                    // [from, to, newAllowance]
+
+    // Store the new allowance of the caller towards the spender
+    STORE_ELEMENT_FROM_KEYS(0x00)
+    0x01 0x00 mstore 0x20 0x00 return
+}
+
+/// @dev Atomically decreases the allowance granted to `spender` by the caller.
+///      
+///      This is an alternative to {approve} that can be used as a mitigation for
+///      problems described in {IERC20-approve}.
+///      
+///      Emits an {Approval} event indicating the updated allowance.
+///      
+///      Requirements:
+///         - `spender` cannot be the zero address.
+///         - `spender` must have allowance for the caller of at least
+///           `subtractedValue`.
+#define macro DECREASE_ALLOWANCE() = takes (0) returns (0) {
+    // Load the calldata's bytes from 4 to 36
+    0x04 calldataload dup1          // [to, to]
+    // Load the caller addres
+    caller                          // [from, to, to]
+
+    // Load the current allowance
+    LOAD_ELEMENT_FROM_KEYS(0x00)    // [allowance, to]
+
+    // Load the calldata's bytes from 36 to 68 and SUB
+    0x24 calldataload swap1 sub           // [newAllowance, to]
+    swap1 caller                    // [from, to, newAllowance]
+
+    // Store the new allowance of the caller towards the spender
+    STORE_ELEMENT_FROM_KEYS(0x00)
+    0x01 0x00 mstore 0x20 0x00 return
 }
 
 /// @dev ERC20 transfer from caller to an account
@@ -269,18 +294,53 @@
     0x20 0x00 return
 }
 
+/// @dev Decrease balance of an account according to 
+///      the parent Transfer action.
+///      Simply decrease the balance of the `from`.
+#define macro TRANSFER_TAKE_FROM(error) = takes(3) returns (3) {
+    // Ensure that the sender has a sufficient balance.
+    // input stack: [value, from, to]
+    dup2                // [from, value, from, to]
+    [BALANCE_POINTER] LOAD_ELEMENT_FROM_KEYS(0x00)  // [balance, value, from, to]
+    dup1                // [balance, balance, value, from, to]
+    dup3                // [value, balance, balance, value, from, to]
+    gt 0x0 eq           // [value>balance, balance, value, from, to]              
+    0x20                // [msg length, value>balance, balance, value, from, to]              
+    0x45524332303a20616d6f756e7420657863656564732062616c616e6365000000
+    swap2               // [value>balance, require msg.len, msg, balance, value, from, to]
+    REQUIRE()  
+
+    // Update the sender's balance.
+    // input stack: [balance, value, from, to]
+    dup2                // [value, balance, value, from, to]
+    swap1               // [balance, value, value, from, to]
+    sub                 // [balance - value, value, from, to]
+    dup3                // [from, balance-value, value, from, to]
+    [BALANCE_POINTER] STORE_ELEMENT_FROM_KEYS(0x00) // [value, from, to]
+}
+
+/// @dev Increase balance of an account according to 
+///      the parent Transfer action.
+///      Simply increase the balance of the `to`.
+#define macro TRANSFER_GIVE_TO() = takes(3) returns (0) {
+    // Update the balance of the recipient.
+    // input stack: [value, from, to]
+    dup3                // [to, value, from, to]
+    dup2                // [value, to, value, from, to]
+    swap1               // [to, value, value, from, to]
+    [BALANCE_POINTER] LOAD_ELEMENT_FROM_KEYS(0x00)  // [balance, value, value, from, to]
+    add                 // [balance+value, value, from, to]
+    dup4                // [to, balance+value, value, from, to]
+    [BALANCE_POINTER] STORE_ELEMENT_FROM_KEYS(0x00) // [value, from, to]
+}
+
 /// @dev Mint token to an account
 ///
 ///      Expected calldata: `address, uint256` with the account address first
 ///      and the amount to mint in second
-#define macro MINT() = takes(0) returns (0) {
-    // Ensure that the sender is the owner of the contract.
-    ONLY_OWNER()
-
+#define macro MINT() = takes(2) returns (0) {
     // Setup the stack for the mint function.
-    0x04 calldataload   // [to]
-    0x00                // [from (0x00), to]
-    0x24 calldataload   // [value, from, to]
+    0x00 swap1                // [value, from (0x00), to]
 
     // Give tokens to the recipient.
     TRANSFER_GIVE_TO()  // [value, from, to]
@@ -307,10 +367,11 @@
     /* ERC20 JumpDest */
     dup1 __FUNC_SIG(transfer) eq transfer jumpi
     dup1 __FUNC_SIG(transferFrom) eq transferFrom jumpi
-    dup1 __FUNC_SIG(mint) eq mints jumpi
     dup1 __FUNC_SIG(balanceOf) eq balanceOf jumpi
     dup1 __FUNC_SIG(totalSupply) eq totalSupply jumpi
     dup1 __FUNC_SIG(approve) eq approve jumpi
+    dup1 __FUNC_SIG(increaseAllowance) eq increaseAllowance jumpi
+    dup1 __FUNC_SIG(decreaseAllowance) eq decreaseAllowance jumpi
     dup1 __FUNC_SIG(allowance) eq allowance jumpi
     dup1 __FUNC_SIG(decimals) eq decimals jumpi
     dup1 __FUNC_SIG(name) eq name jumpi
@@ -323,14 +384,16 @@
         TRANSFER()
     transferFrom:
         TRANSFER_FROM()
-    mints:
-        MINT()
     balanceOf:
         BALANCE_OF()
     totalSupply:
         TOTAL_SUPPLY()
     approve:
         APPROVE()
+    increaseAllowance:
+        INCREASE_ALLOWANCE()
+    decreaseAllowance:
+        DECREASE_ALLOWANCE()
     allowance:
         ALLOWANCE()
     decimals:

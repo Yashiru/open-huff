@@ -11,9 +11,10 @@ contract ERC20 is Test {
     /// @dev Address of the SimpleStore contract.  
     IERC20 public dai;
     address public daiOwner;
-    uint256 defaultWhaleBalance = 1000000000 ether;
     address public daiWhale = makeAddr("DAI Whale");
     address public daiReceiver = makeAddr("DAI receiver");
+    address public emptyDaiWallet = makeAddr("empty");
+    uint256 public supply = 1000000000 ether;
 
     string constant name = "Dai Stablecoin";
     string constant symbol = "DAI";
@@ -26,51 +27,29 @@ contract ERC20 is Test {
             "token/ERC20/ERC20", 
             abi.encode(
                 name,
-                symbol
+                symbol,
+                supply
             )
         ));
         daiOwner = dai.owner();
-
+        
         vm.prank(daiOwner);
-        dai.mint(daiWhale, defaultWhaleBalance);
-    }
-
-    function testMint() public returns (uint256 mintedAmount){
-        mintedAmount = 1000 ether;
-
-        vm.startPrank(daiOwner);
-
-        uint256 oldBalance = dai.balanceOf(daiOwner);
-
-        dai.mint(daiOwner, mintedAmount);
-        uint256 newBalance = dai.balanceOf(daiOwner);
-        
-        assertEq(newBalance, oldBalance+mintedAmount);
-        
-        vm.stopPrank();
+        dai.transfer(daiWhale, 1000000 ether);
     }
 
     function testTotalSupply() public {
-        uint256 expectedSupply = testMint() + defaultWhaleBalance;
+        uint256 expectedSupply = supply;
         uint256 supply = dai.totalSupply();
         assertEq(supply, expectedSupply);
     }
 
     function testBalanceOf() public {
-        uint256 oldBalance = dai.balanceOf(daiOwner);
-        assertEq(oldBalance, 0);
-
-        uint256 mintedAmount = testMint();
-
-        assertEq(dai.balanceOf(daiOwner), mintedAmount);
-
-        mintedAmount = testMint();
-
-        assertEq(dai.balanceOf(daiOwner), mintedAmount*2);
+        assertEq(dai.balanceOf(daiOwner), supply - dai.balanceOf(daiWhale));
+        assertEq(dai.balanceOf(emptyDaiWallet), 0);
     }
 
     function testTransfer() public {
-        assertEq(dai.balanceOf(daiWhale), defaultWhaleBalance);
+        assertEq(dai.balanceOf(daiOwner), supply - dai.balanceOf(daiWhale));
 
         uint256 oldSenderBalance = dai.balanceOf(daiWhale);
         uint256 oldReceiverBalance = dai.balanceOf(daiReceiver);
@@ -84,7 +63,7 @@ contract ERC20 is Test {
     }
 
     function testTransferFrom() public {
-        assertEq(dai.balanceOf(daiWhale), defaultWhaleBalance);
+        assertEq(dai.balanceOf(daiOwner), supply - dai.balanceOf(daiWhale));
 
         uint256 oldSenderBalance = dai.balanceOf(daiWhale);
         uint256 oldReceiverBalance = dai.balanceOf(daiReceiver);
@@ -102,11 +81,35 @@ contract ERC20 is Test {
     function testApprove() public {
         vm.startPrank(daiWhale);
 
-        dai.approve(address(this), type(uint256).max);
-        assertEq(dai.allowance(daiWhale, address(this)), type(uint256).max);
+        dai.approve(address(this), 1);
+        assertEq(dai.allowance(daiWhale, address(this)), 1);
 
         dai.approve(address(this), 0);
         assertEq(dai.allowance(daiWhale, address(this)), 0);
+        
+        vm.stopPrank();
+    }
+
+    function testIncreaseAllowance() public {
+        vm.startPrank(daiWhale);
+
+        dai.approve(address(this), 1);
+        assertEq(dai.allowance(daiWhale, address(this)), 1);
+        
+        dai.increaseAllowance(address(this), 1);
+        assertEq(dai.allowance(daiWhale, address(this)), 2);
+
+        vm.stopPrank();
+    }
+
+    function testDecreaseAllowance() public {
+        vm.startPrank(daiWhale);
+
+        dai.approve(address(this), 2);
+        assertEq(dai.allowance(daiWhale, address(this)), 2);
+
+        dai.decreaseAllowance(address(this), 1);
+        assertEq(dai.allowance(daiWhale, address(this)), 1);
         
         vm.stopPrank();
     }
