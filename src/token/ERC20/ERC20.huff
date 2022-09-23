@@ -27,7 +27,7 @@
 
 /* Events */
 #define event Transfer(address,address,uint256)
-#define event Approve(address,address,uint256)
+#define event Approval(address,address,uint256)
 
 /* Events Signatures */
 #define constant TRANSFER_EVENT_SIGNATURE = 0xDDF252AD1BE2C89B69C2B068FC378DAA952BA7F163C4A11628F55A4DF523B3EF
@@ -169,15 +169,23 @@
 ///      Expected calldata: `address, uint256` with the spender first
 ///      and the amount in second
 #define macro APPROVE() = takes (0) returns (0) {
-    // Load the calldata's bytes from 36 to 68
-    0x24 calldataload       // [value]
     // Load the calldata's bytes from 4 to 36
-    0x04 calldataload       // [to, value]
+    0x04 calldataload               // [to]
     // Load the caller addres
-    caller                  // [from, to, value]
+    caller                          // [from, to]
+    // Load the calldata's bytes from 36 to 68
+    0x24 calldataload               // [value, from, to]
+    dup1 dup4 dup4                  // [from, to, value, value, from, to]
 
     // Store the new allowance of the caller towards the spender
-    STORE_ELEMENT_FROM_KEYS(0x00)
+    STORE_ELEMENT_FROM_KEYS(0x00)   // [value, from, to]
+
+    // Emit the transfer event.
+    0x00 mstore                     // [from, to]
+    [APPROVAL_EVENT_SIGNATURE]      // [sig, from, to]
+    0x20 0x00                       // [0, 32, sig, from, to]
+    log3                            // []
+
     0x01 0x00 mstore 0x20 0x00 return
 }
 
@@ -201,10 +209,18 @@
 
     // Load the calldata's bytes from 36 to 68 and ADD
     0x24 calldataload add           // [newAllowance, to]
-    swap1 caller                    // [from, to, newAllowance]
+    caller swap1                    // [newAllowance, from, to]
+    dup1 dup4 dup4                  // [from, to, newAllowance, newAllowance, from, to]
 
     // Store the new allowance of the caller towards the spender
     STORE_ELEMENT_FROM_KEYS(0x00)
+
+    // Emit the transfer event.
+    0x00 mstore                     // [from, to]
+    [APPROVAL_EVENT_SIGNATURE]      // [sig, from, to]
+    0x20 0x00                       // [0, 32, sig, from, to]
+    log3                         
+
     0x01 0x00 mstore 0x20 0x00 return
 }
 
@@ -230,10 +246,18 @@
 
     // Load the calldata's bytes from 36 to 68 and SUB
     0x24 calldataload swap1 sub           // [newAllowance, to]
-    swap1 caller                    // [from, to, newAllowance]
+    caller swap1                    // [newAllowance, from, to]
+    dup1 dup4 dup4                  // [from, to, newAllowance, newAllowance, from, to]
 
     // Store the new allowance of the caller towards the spender
     STORE_ELEMENT_FROM_KEYS(0x00)
+
+    // Emit the transfer event.
+    0x00 mstore                     // [from, to]
+    [APPROVAL_EVENT_SIGNATURE]      // [sig, from, to]
+    0x20 0x00                       // [0, 32, sig, from, to]
+    log3                         
+    
     0x01 0x00 mstore 0x20 0x00 return
 }
 
