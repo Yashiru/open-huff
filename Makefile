@@ -2,5 +2,5 @@ ifneq (,$(wildcard ./.env))
 	include .env
 endif
 
-interfaces: 
+generate-interfaces: 
 	./generateInterfaces.sh
