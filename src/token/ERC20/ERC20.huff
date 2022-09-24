@@ -352,7 +352,7 @@
     // Require to != 0x00
     __RIGHTPAD(0x45524332303a207472616e7366657220746f207a65726f2061646472657373)
     0x1f                // [msg.len, msg, to]
-    dup5 0x00 eq iszero // [0x00 != to, msg.len, msg, to]
+    dup5                // [0x00 != to, msg.len, msg, to]
     REQUIRE()
 
     // Update the balance of the recipient.
@@ -409,6 +409,8 @@
     dup1 __FUNC_SIG(symbol) eq symbol jumpi
     /* Ownable JumpDest */
     __FUNC_SIG(owner) eq owner jumpi
+
+    0x00 0x00 revert
 
     /* ERC20 JumpDest */
     transfer:
