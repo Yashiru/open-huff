@@ -1,0 +1,200 @@
+/// @title ERC1967 Upgrade
+/// @author Yashiru <https://github.com/Yashiru>
+/// @notice ERC1967 Upgrade contract
+
+/* Imports */
+#include "../Proxy.huff"
+#include "../../utils/Address.huff"
+#include "../../utils/Require.huff"
+
+/* Events */
+/// @dev Emited when the implementation is upgraded
+#define event Upgraded(address)
+/// @dev Emited when the proxy admin has changed
+#define event AdminChanged(address,address)
+/// @dev Emited when the beacon is upgraded
+#define event BeaconUpgraded(address)
+
+/* Events Signatures */
+/// @dev Upgraded(address) event signature
+#define constant UPGRADED_EVENT_SIGNATURE = 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b
+/// @dev AdminChanged(address,address) event signature
+#define constant ADMIN_CHANGED_EVENT_SIGNATURE = 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f
+/// @dev BeaconUpgraded(address) event signature
+#define constant BEACON_UPGRADED_EVENT_SIGNATURE = 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e
+
+/* Storage Slots */
+/// @dev Implementation address storage slot
+#define constant _IMPLEMENTATION_SLOT = FREE_STORAGE_POINTER()
+/// @dev Proxy admin address storage slot
+#define constant _ADMIN_SLOT = FREE_STORAGE_POINTER()
+/// @dev Beacon storage slot
+#define constant _BEACON_SLOT = FREE_STORAGE_POINTER()
+
+
+/********************************************************
+              Implementation manipulation
+********************************************************/
+
+/// @dev Returns the current implementation address.
+///
+///      Output stack: [address]
+#define macro _GET_IMPLEMENTATION() = takes(0) returns(1) {
+    // Load the implementation address
+    [_IMPLEMENTATION_SLOT] sload
+}
+
+/// @dev Stores a new address in the EIP1967 implementation slot.
+///
+///      Input stack: [address]
+#define macro _SET_IMPLEMENTATION() = takes(1) returns(0) {
+    // Check if new implementation is a contract
+    0x455243313936373a2061646472657373206973206e6f7420636f6e7472616374
+    0x20                            // [msg.len, msg, address]
+    dup3 IS_CONTRACT()              // [addressCodeSize != 0, msg.len, msg, address]
+    REQUIRE()                       // [address]
+
+    // Store the new implementation address
+    [_IMPLEMENTATION_SLOT] sstore   // []
+}
+
+/// @dev Perform implementation upgrade.
+///      Emits an {Upgraded} event.
+///
+///      Input stack: [address]
+#define macro _UPGRADE_TO() = takes(1) returns(0) {
+    // Store the new impolementation address
+    dup1 _SET_IMPLEMENTATION()      // [address]
+
+    // Emit the Upgraded event
+    0x00 mstore                     // []
+    [UPGRADED_EVENT_SIGNATURE]      // [eventSig]
+    0x20 0x00                       // [0x00, 0x20, eventSig]
+    log1                            // []
+}
+
+/// @dev Perform implementation upgrade with additional setup call.
+///      Emits an {Upgraded} event.
+///
+///      Input stack: [address]
+#define macro _UPGRADE_TO_AND_CALL(data_offset) = takes(1) returns(0) {
+    // Upgrade implementation
+    dup1 _UPGRADE_TO()                              // [address]
+
+    // Copy delegate calldata in memory
+    <data_offset> calldatasize sub                  // [calldatasize - <data_offset>, address]
+    <data_offset> 0x40 add 0x00                     // [0x00, <data_offset>, calldatasize - <data_offset>, address]
+    calldatacopy                                    // [address]
+
+    // Call implementation with the provided calldata
+    0x00 0x40 <data_offset> calldatasize sub sub    // [calldatasize - <data_offset> - 0x40, 0x00, address]
+    0x00 0x00 swap4 gas                             // [address, 0x00, calldatasize - <data_offset> - 0x40, 0x00, 0x00]
+    delegatecall                                    // [success]
+    returndatasize 0x00 0x00 returndatacopy         // [success]
+    
+    // Revert if the call did not succeed
+    success jumpi
+        returndatasize 0x00 revert
+
+    success:
+        msize 0x00 return
+}
+
+
+/********************************************************
+                    Admin functions
+********************************************************/
+
+/// @dev Returns the current admin.
+///
+///      Output stack: [address]
+#define macro _GET_ADMIN() = takes(0) returns(1) {
+    // Load admin address
+    [_ADMIN_SLOT] sload
+}
+
+/// @dev Stores a new address in the EIP1967 admin slot.
+///
+///      Input stack: [address]
+#define macro _SET_ADMIN() = takes(1) returns(0) {
+    // Check if new admin is zero address
+    __RIGHTPAD(0x455243313936373a2041646d696e206973207a65726f2061646472657373)
+    0x1e                            // [msg.len, msg, address]
+    dup3                            // [addressCodeSize != 0, msg.len, msg, address]
+    REQUIRE()                       // [address]
+
+    // Store new admin address
+    [_ADMIN_SLOT] sstore            // []
+}
+
+/// @dev Changes the admin of the proxy.
+///      Emits an {AdminChanged} event.
+///
+///      Input stack: [address]
+#define macro _CHANGE_ADMIN() = takes(1) returns(0) {
+    // Load old admin address
+    [_ADMIN_SLOT] sload                     // [oldAddress, newAddress]
+
+    // Store new admin address
+    swap1 dup1 _SET_ADMIN()                 // [newAddress, oldAddress]
+
+    // Emit AdminChanged event
+    0x00 mstore                             // [oldAddress]
+    [ADMIN_CHANGED_EVENT_SIGNATURE]         // [eventSig, oldAddress]
+    0x20 0x00                               // [0x00, 0x20, eventSig, oldAddress]
+    log2                                    // []
+}
+
+/********************************************************
+                   Beacon functions
+********************************************************/
+
+/// @dev Returns the current admin.
+///
+///      Output stack: [address]
+#define macro _GET_BEACON() = takes(0) returns(1) {
+    // Load beacon address
+    [_BEACON_SLOT] sload
+}
+
+/// @dev Stores a new address in the EIP1967 admin slot and returns
+///      the new beacon implementation address on the stack     
+///
+///      Output stack: [beaconImpAddress]
+#define macro _SET_BEACON() = takes(1) returns(1) {
+    // Check if new beacon address is zero address
+    __RIGHTPAD(0x455243313936373a20626561636f6e206e6f74206120636f6e7472616374)
+    0x1e                            // [msg.len, msg, beaconAddress]
+    dup3                            // [beaconCodeSize != 0, msg.len, msg, beaconAddress]
+    REQUIRE()                       // [beaconAddress]
+
+    // Get the new beacon implementation address in memory
+    dup1 0x00 0x00 0x00 0x00 0x20   // [0x20, 0x00, 0x00, 0x00, 0x00, beaconAddress, beaconAddress]
+    swap5 gas                       // [availableGas, beaconAddress, 0x00, 0x00, 0x00, 0x00, 0x20, beaconAddress]
+    call                            // [beaconAddress]
+
+    // Check if the new beacon implementation is a contract
+    0x00 mload IS_CONTRACT()        // [isBeaconImpContract, beaconAddress]
+    0x1b                            // [msg.len, isBeaconImpContract, beaconAddress]
+    __RIGHTPAD(0x455243313936373a20696e76616c696420626561636f6e20696d70)
+    swap2                           // [isBeaconImpContract, msg.len, msg, beaconAddress]
+    REQUIRE()                       // [beaconAddress]
+
+    // Store the new beacon address
+    [_BEACON_SLOT] sstore           // []
+}
+
+#define macro _UPDATE_BEACON_TO_AND_CALL() = takes(1) returns(0) {
+    // Copy all calldata in memory
+    calldatasize 0x20 sub               // [calldatasize-0x20, beaconAddress]
+    0x20 0x00                           // [0x00, 0x20, calldatasize-0x20, beaconAddress]
+    calldatacopy                        // [beaconAddress]
+    
+    // Upgrade implementation and get new beacon implementation address
+    _SET_BEACON()                       // [beaconImpAddress]
+
+    // Call beacon implementation with the provided calldata
+    0x00 calldatasize 0x00              // [0x00, calldatasize, 0x00, beaconImpAddress]
+    0x00 swap4 gas                      // [availableGas, beaconImpAddress, 0x00, calldatasize, 0x00, 0x00]
+    delegatecall                        // []
+}
