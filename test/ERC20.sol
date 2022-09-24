@@ -55,14 +55,25 @@ contract ERC20 is Test {
         uint256 oldReceiverBalance = dai.balanceOf(daiReceiver);
         uint256 sendValue = 100 ether;
         
-        vm.prank(daiWhale);
+        vm.startPrank(daiWhale);
+
         dai.transfer(daiReceiver, sendValue);
 
         assertEq(dai.balanceOf(daiReceiver), oldReceiverBalance + sendValue);
         assertEq(dai.balanceOf(daiWhale), oldSenderBalance - sendValue);
+
+        // Test can't send fund to address(0)
+        vm.expectRevert(abi.encode("ERC20: transfer to zero address"));
+        dai.transfer(address(0), 10);
+
+        vm.stopPrank();
+
+        // Test transfer more than balance
+        vm.expectRevert(abi.encode("ERC20: amount exceeds balance"));
+        dai.transfer(daiReceiver, 10);
     }
 
-    function testTransferFrom() public {
+    function testTransfesrFrom() public {
         assertEq(dai.balanceOf(daiOwner), supply - dai.balanceOf(daiWhale));
 
         uint256 oldSenderBalance = dai.balanceOf(daiWhale);
@@ -76,6 +87,14 @@ contract ERC20 is Test {
 
         assertEq(dai.balanceOf(daiReceiver), oldReceiverBalance + sendValue);
         assertEq(dai.balanceOf(daiWhale), oldSenderBalance - sendValue);
+
+        // Test can't send fund to address(0)
+        vm.expectRevert(abi.encode("ERC20: transfer to zero address"));
+        dai.transferFrom(daiWhale, address(0), 10);
+
+        // Test can't send fund from address(0)
+        vm.expectRevert(abi.encode("ERC20: insufficient allowance"));
+        dai.transferFrom(address(0), daiWhale, 10);
     }
 
     function testApprove() public {
