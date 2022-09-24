@@ -1,0 +1,29 @@
+/// @title Proxy
+/// @author Yashiru <https://github.com/Yashiru>
+/// @notice Basic Proxy feature
+
+
+/// @dev Delegates the current call to 'implementation'.
+///      This function does not return to its internal call site, 
+///      it will return directly to the external caller.
+///
+///      Input stack: [implementation]
+#define macro _DELEGATE() = takes(1) returns(0) {
+    // Copy all calldata in memory
+    calldatasize                            // [calldatasize, implementation]
+    0x00 0x00                               // [0x00, 0x00, calldatasize, implementation]
+    calldatacopy                            // [implementation]
+
+    // Call implementation with all the calldata
+    0x00 calldatasize 0x00                  // [0x00, calldatasize, 0x00, implementation]
+    0x00 swap4 gas                          // [availableGas, implementation, 0x00, calldatasize, 0x00, 0x00]
+    delegatecall                            // [success]
+    returndatasize 0x00 0x00 returndatacopy // [success]
+    
+    // Revert if the call did not succeed
+    success jumpi
+        returndatasize 0x00 revert
+
+    success:
+        msize 0x00 return
+}
