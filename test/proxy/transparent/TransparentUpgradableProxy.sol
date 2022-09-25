@@ -102,4 +102,15 @@ contract ERC20 is Test {
 
         vm.stopPrank();
     }
+
+    function testNonAdminCall() public {
+        (bool success, bytes memory data) = address(proxy).call(
+            abi.encodeWithSignature(
+                "decimals()"
+            )
+        );
+
+        assertTrue(success);
+        assertEq(uint256(bytes32(data)), uint256(0x12));
+    }
 }
