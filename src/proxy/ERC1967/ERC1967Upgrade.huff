@@ -75,7 +75,8 @@
 
 /// @dev Perform implementation upgrade with additional setup call.
 ///      Emits an {Upgraded} event.
-///
+/// @param data_offset The offset in calldata where the delegatecall calldatas are.
+/// 
 ///      Input stack: [address]
 #define macro _UPGRADE_TO_AND_CALL(data_offset) = takes(1) returns(0) {
     // Upgrade implementation
