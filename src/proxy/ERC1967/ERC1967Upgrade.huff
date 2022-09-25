@@ -134,11 +134,11 @@
 ///
 ///      Input stack: [address]
 #define macro _CHANGE_ADMIN() = takes(1) returns(0) {
+    // Store new admin address
+    dup1 _SET_ADMIN()                       // [newAddress]
+
     // Load old admin address
     [_ADMIN_SLOT] sload                     // [oldAddress, newAddress]
-
-    // Store new admin address
-    swap1 dup1 _SET_ADMIN()                 // [newAddress, oldAddress]
 
     // Emit AdminChanged event
     0x00 mstore                             // [oldAddress]
