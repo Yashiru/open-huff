@@ -25,5 +25,5 @@
         returndatasize 0x00 revert
 
     success:
-        msize 0x00 return
+        returndatasize 0x00 return
 }
