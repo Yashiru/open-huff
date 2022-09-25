@@ -188,15 +188,24 @@
 
 #define macro _UPDATE_BEACON_TO_AND_CALL() = takes(1) returns(0) {
     // Copy all calldata in memory
-    calldatasize 0x20 sub               // [calldatasize-0x20, beaconAddress]
-    0x20 0x00                           // [0x00, 0x20, calldatasize-0x20, beaconAddress]
-    calldatacopy                        // [beaconAddress]
+    calldatasize 0x20 sub                       // [calldatasize-0x20, beaconAddress]
+    0x20 0x00                                   // [0x00, 0x20, calldatasize-0x20, beaconAddress]
+    calldatacopy                                // [beaconAddress]
     
     // Upgrade implementation and get new beacon implementation address
-    _SET_BEACON()                       // [beaconImpAddress]
+    _SET_BEACON()                               // [beaconImpAddress]
 
     // Call beacon implementation with the provided calldata
-    0x00 calldatasize 0x00              // [0x00, calldatasize, 0x00, beaconImpAddress]
-    0x00 swap4 gas                      // [availableGas, beaconImpAddress, 0x00, calldatasize, 0x00, 0x00]
-    delegatecall                        // []
+    0x00 calldatasize 0x00                      // [0x00, calldatasize, 0x00, beaconImpAddress]
+    0x00 swap4 gas                              // [availableGas, beaconImpAddress, 0x00, calldatasize, 0x00, 0x00]
+    delegatecall                                // [success]
+    returndatasize 0x00 0x00 returndatacopy     // [success]
+    
+    // Revert if the call did not succeed
+    success jumpi
+        returndatasize 0x00 revert
+
+    // Return all returned datas
+    success:
+        returndatasize 0x00 return
 }
