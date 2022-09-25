@@ -65,8 +65,7 @@
 
 /// @dev Returns the current admin.
 ///
-///      NOTE: If this macro is never call outside of this file, only the admin can 
-///            call this function.
+///      NOTE: Only the admin can call this macro.
 ///
 ///      TIP: To get this value clients can read directly from the storage slot shown
 ///           below (specified by EIP1967) using the
@@ -79,8 +78,7 @@
 
 /// @dev Returns the current implementation.
 ///
-///      NOTE: If this macro is never call outside of this file, only the admin can 
-///            call this function.
+///      NOTE: Only the admin can call this macro.
 ///
 ///      TIP: To get this value clients can read directly from the storage slot shown
 ///           below (specified by EIP1967) using the
@@ -94,8 +92,7 @@
 /// @dev Changes the admin of the proxy.
 ///      Emits an AdminChanged() event.
 ///
-///      NOTE: If this macro is never call outside of this file, only the admin can 
-///            call this function.
+///      NOTE: Only the admin can call this macro.
 #define macro CHANGE_ADMIN() = takes(0) returns (0) {
     0x04 calldataload
     _CHANGE_ADMIN()
@@ -104,8 +101,7 @@
 
 /// @dev Upgrade the implementation of the proxy.
 ///
-///      NOTE: If this macro is never call outside of this file, only the admin can 
-///            call this function.
+///      NOTE: Only the admin can call this macro.
 #define macro UPGRADE_TO() = takes(0) returns (0) {
     0x04 calldataload
     _UPGRADE_TO()
@@ -116,8 +112,7 @@
 ///      implementation as specified by `data`, which should be an encoded function call. 
 ///      This is useful to initialize new storage variables in the proxied contract.
 ///
-///      NOTE: If this macro is never call outside of this file, only the admin can 
-///            call this function.
+///      NOTE: Only the admin can call this macro.
 #define macro UPGRADE_TO_AND_CALL() = takes(0) returns (0) {
     0x04 calldataload
     _UPGRADE_TO_AND_CALL(0x24)
