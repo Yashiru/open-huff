@@ -97,6 +97,7 @@
     success jumpi
         returndatasize 0x00 revert
 
+    // Return all returned datas
     success:
         msize 0x00 return
 }
