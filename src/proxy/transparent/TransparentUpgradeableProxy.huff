@@ -35,11 +35,11 @@
 #define function upgradeTo(address) nonpayable returns ()
 #define function upgradeToAndCall(address,bytes) nonpayable returns ()
 
-/// @dev Constructor
+/// @dev Inhertor callable constructor
 /// @param implementation The default implementation address
 /// @param admin The default admin address
 /// @param data The data to send to the implementation 
-#define macro CONSTRUCTOR() = takes(0) returns (0) {
+#define macro CONSTRUCTOR_PROXY_DELEGATION() = takes(0) returns (0) {
     // Set the admin address
     0x20                        // [size]
     0x20 codesize sub           // [offset, size]
@@ -55,6 +55,12 @@
     codecopy                    // []
     0x00 mload                  // [arg]
     _UPGRADE_TO()
+}
+
+/// @dev Constructor macro. Used in test purposes only.
+///      See {CONSTRUCTOR_PROXY_DELEGATION} macro
+#define macro CONSTRUCTOR() = takes(0) returns (0) {
+    CONSTRUCTOR_PROXY_DELEGATION()
 }
 
 /// @dev Returns the current admin.
