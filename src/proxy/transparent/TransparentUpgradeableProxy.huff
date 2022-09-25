@@ -1,0 +1,183 @@
+/// @title TransparentUpgradableProxy
+/// @author Yashiru <https://github.com/Yashiru>
+/// @notice This contract implements a proxy that is upgradeable by an admin.
+///         
+///         /!\
+///         When a contract inherits this proxy, he must call this MAIN_PROXY_DELEGATION macro in his MAIN macro before
+///         any other operation.
+///         /!\
+///
+///         To avoid https://medium.com/nomic-labs-blog/malicious-backdoors-in-ethereum-proxies-62629adf3357[proxy selector
+///         clashing], which can potentially be used in an attack, this contract uses a pattern that implies two things 
+///         that go hand in hand:
+///         
+///         1. If any account other than the admin calls the proxy, the call will be forwarded to the implementation, even if
+///         that call matches one of the admin functions exposed by the proxy itself.
+///         2. If the admin calls the proxy, it can access the admin functions, but its calls will never be forwarded to the
+///         implementation. If the admin tries to call a function on the implementation it will continue to the code of the 
+///         proxy inheritor's MAIN macro.
+///         This means that all the inheritor code of the MAIN macro will be accessible only by the admin.
+///         
+///         These properties mean that the admin account can only be used for admin actions like upgrading the proxy or changing
+///         the admin, so it's best if it's a dedicated account that is not used for anything else. This will avoid headaches due
+///         to sudden errors when trying to call a function from the proxy implementation.
+///         
+///         Our recommendation is for the dedicated account to be an instance of the {ProxyAdmin} contract. If set up this way,
+///         you should think of the `ProxyAdmin` instance as the real administrative interface of your proxy.
+
+/* Imports */
+#include "../ERC1967/ERC1967Upgrade.huff"
+
+/* Interface */
+#define function admin() nonpayable returns (address)
+#define function implementation() nonpayable returns (address)
+#define function changeAdmin(address) nonpayable returns ()
+#define function upgradeTo(address) nonpayable returns ()
+#define function upgradeToAndCall(address,bytes) nonpayable returns ()
+
+/// @dev Inhertor callable constructor
+/// @param implementation The default implementation address
+/// @param admin The default admin address
+/// @param data The data to send to the implementation 
+#define macro CONSTRUCTOR_PROXY_DELEGATION() = takes(0) returns (0) {
+    // Set the admin address
+    0x20                        // [size]
+    0x20 codesize sub           // [offset, size]
+    0x00                        // [mem, offset, size]
+    codecopy                    // []
+    0x00 mload                  // [admin]
+    _SET_ADMIN()
+
+    // Upgrade implementation and call it
+    0x20                        // [size]
+    0x40 codesize sub           // [offset, size]
+    0x00                        // [mem, offset, size]
+    codecopy                    // []
+    0x00 mload                  // [arg]
+    _UPGRADE_TO()
+}
+
+/// @dev Constructor macro. Used in test purposes only.
+///      See {CONSTRUCTOR_PROXY_DELEGATION} macro
+#define macro CONSTRUCTOR() = takes(0) returns (0) {
+    CONSTRUCTOR_PROXY_DELEGATION()
+}
+
+/// @dev Returns the current admin.
+///
+///      NOTE: Only the admin can call this macro.
+///
+///      TIP: To get this value clients can read directly from the storage slot shown
+///           below (specified by EIP1967) using the
+///           https://eth.wiki/json-rpc/API#eth_getstorageat[`eth_getStorageAt`] RPC call.
+#define macro ADMIN() = takes(0) returns (0) {
+    _GET_ADMIN()     // [adminAddress] 
+    0x00 mstore      // []
+    0x20 0x00 return
+}
+
+/// @dev Returns the current implementation.
+///
+///      NOTE: Only the admin can call this macro.
+///
+///      TIP: To get this value clients can read directly from the storage slot shown
+///           below (specified by EIP1967) using the
+///           https://eth.wiki/json-rpc/API#eth_getstorageat[`eth_getStorageAt`] RPC call.
+#define macro IMPLEMENTATION() = takes(0) returns (0) {
+    _GET_IMPLEMENTATION()     // [adminAddress] 
+    0x00 mstore               // []
+    0x20 0x00 return
+}
+
+/// @dev Changes the admin of the proxy.
+///      Emits an AdminChanged() event.
+///
+///      NOTE: Only the admin can call this macro.
+#define macro CHANGE_ADMIN() = takes(0) returns (0) {
+    0x04 calldataload
+    _CHANGE_ADMIN()
+    0x01 0x00 mstore 0x20 0x00 return
+}
+
+/// @dev Upgrade the implementation of the proxy.
+///
+///      NOTE: Only the admin can call this macro.
+#define macro UPGRADE_TO() = takes(0) returns (0) {
+    0x04 calldataload
+    _UPGRADE_TO()
+    0x01 0x00 mstore 0x20 0x00 return
+}
+
+/// @dev Upgrade the implementation of the proxy, and then call a function from the new 
+///      implementation as specified by `data`, which should be an encoded function call. 
+///      This is useful to initialize new storage variables in the proxied contract.
+///
+///      NOTE: Only the admin can call this macro.
+#define macro UPGRADE_TO_AND_CALL() = takes(0) returns (0) {
+    0x04 calldataload
+    _UPGRADE_TO_AND_CALL(0x24)
+    0x01 0x00 mstore 0x20 0x00 return
+}
+
+
+/********************************************************
+                      Main jumps
+********************************************************/
+
+
+/// @dev Delegate the current call to the implementation
+#define macro DELEGATE_TO_IMPLEMENTATION() = takes(0) returns (0) {
+    _GET_IMPLEMENTATION()  // []
+    _DELEGATE()            // []
+}
+
+/// @dev Jump to the revelant macro as a regular caller
+///
+///      Input stack: [functionSig]
+#define macro ADMIN_JUMPS() = takes(1) returns (0) {
+    dup1 __FUNC_SIG(admin) eq admin jumpi
+    dup1 __FUNC_SIG(implementation) eq implementation jumpi
+    dup1 __FUNC_SIG(changeAdmin) eq changeAdmin jumpi
+    dup1 __FUNC_SIG(upgradeTo) eq upgradeTo jumpi
+    dup1 __FUNC_SIG(upgradeToAndCall) eq upgradeToAndCall jumpi
+    continue jump
+
+    admin:
+        ADMIN()
+    implementation:
+        IMPLEMENTATION()
+    changeAdmin:
+        CHANGE_ADMIN()
+    upgradeTo:
+        UPGRADE_TO()
+    upgradeToAndCall:
+        UPGRADE_TO_AND_CALL()
+
+    continue:
+}
+
+/// @dev Main inheritance proxy macro.
+///
+///      NOTE: When you want to inherit this proxy, you must not only import the file as 
+///      `#include "@open-huff/src/proxy/transparent/TransparentUpgradableProxy.huff"`,
+///      but also call this macro in the MAIN macro of the inheritor contract.
+#define macro MAIN_PROXY_DELEGATION() = takes(0) returns (1) {
+    // Identify which function is being called.
+    0x00 calldataload 0xE0 shr
+
+    // Check if caller is the current admin, if so, jump to
+    // the admin logic
+    caller _GET_ADMIN() eq adminCall jumpi
+    
+    // Delegate calls from non-admin users
+    DELEGATE_TO_IMPLEMENTATION()
+
+    // Jumps for admin calls
+    adminCall:
+        ADMIN_JUMPS()
+}
+
+/// @dev Main proxy macro. Used in test purposes only.
+#define macro MAIN() = takes(0) returns (0) {
+    MAIN_PROXY_DELEGATION()
+}
