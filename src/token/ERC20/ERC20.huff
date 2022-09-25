@@ -423,8 +423,12 @@
     log3                        // []
 }
 
-// Main Macro
-#define macro MAIN() = takes(0) returns (0) {
+/// @dev Main inheritance proxy macro.
+///
+///      NOTE: When you want to inherit this proxy, you must not only import the file as 
+///      `#include "@open-huff/src/token/ERC20/ERC20.huff"`,
+///      but also call this MAIN_ERC20 macro in the MAIN macro of the inheritor contract.
+#define macro MAIN_ERC20() = takes(0) returns (0) {
     // Identify which function is being called.
     0x00 calldataload 0xE0 shr
 
@@ -443,7 +447,7 @@
     /* Ownable JumpDest */
     __FUNC_SIG(owner) eq owner jumpi
 
-    0x00 0x00 revert
+    continue jump
 
     /* ERC20 JumpDest */
     transfer:
@@ -472,4 +476,12 @@
     /* Ownable JumpDest */
     owner:
         OWNER()
+
+    continue:
 }
+
+/// @dev Main proxy macro. Used in test purposes only.
+#define macro MAIN() = takes(0) returns (0) {
+    MAIN_ERC20()
+}
+
