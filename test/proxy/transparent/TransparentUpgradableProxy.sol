@@ -7,9 +7,10 @@ import "forge-std/console.sol";
 import "test/Constants.sol";
 
 import {IERC20} from "../../../src/token/ERC20/IERC20.sol";
+import {ITestTransparentUpgradeableProxy} from "../../interfaces/ITestTransparentUpgradeableProxy.sol";
 import {ITransparentUpgradeableProxy} from "../../../src/proxy/transparent/ITransparentUpgradeableProxy.sol";
 
-contract ERC20 is Test {
+contract ERC20 is Test, ITestTransparentUpgradeableProxy {
     ITransparentUpgradeableProxy proxy;
     IERC20 implementation;
     IERC20 secondImplementation;
@@ -71,6 +72,9 @@ contract ERC20 is Test {
         address newAdmin = proxy.admin();
         assertEq(newAdmin, expectedNewAdmin);
 
+        vm.expectRevert(NewAdminAddressIsZeroAddress.selector);
+        proxy.changeAdmin(address(0));
+
         vm.stopPrank();
     }
 
@@ -81,6 +85,9 @@ contract ERC20 is Test {
 
         address newImp = proxy.implementation();
         assertEq(newImp, address(secondImplementation));
+
+        vm.expectRevert(NewImplementationIsNotAContract.selector);
+        proxy.upgradeTo(address(0));
 
         vm.stopPrank();
     }
@@ -99,6 +106,15 @@ contract ERC20 is Test {
         address newImp = proxy.implementation();
         assertEq(newImp, address(implementation));
         assertTrue(success);
+
+        vm.expectRevert(NewImplementationIsNotAContract.selector);
+        address(proxy).call(
+            abi.encodeWithSignature(
+                "upgradeToAndCall(address,bytes)",
+                address(0), 
+                abi.encodeWithSignature("name()")
+            )
+        );
 
         vm.stopPrank();
     }

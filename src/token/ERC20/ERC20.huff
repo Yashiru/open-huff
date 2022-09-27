@@ -45,6 +45,11 @@
 #define event Transfer(address,address,uint256)
 #define event Approval(address,address,uint256)
 
+/* Custom errors */
+#define error InsufficientAllowance()
+#define error AmountExceedsBalance()
+#define error TransferToZeroAddress()
+
 /* Events Signatures */
 #define constant TRANSFER_EVENT_SIGNATURE = 0xDDF252AD1BE2C89B69C2B068FC378DAA952BA7F163C4A11628F55A4DF523B3EF
 #define constant APPROVAL_EVENT_SIGNATURE = 0x8C5BE1E5EBEC7D5BD14F71427D1E84F3DD0314C0F7B2291E5B200AC8C7C3B925
@@ -331,9 +336,7 @@
     LOAD_ELEMENT_FROM_KEYS(0x00)                // [allowance, from, to]
     0x44 calldataload dup1                      // [value, value, allowance, from, to]
     dup3 dup2 lt swap3 eq swap1 swap2 or        // [value >= allowance, value, from, to]
-    0x1D                                        // [0x1D, value >= allowance, value, from, to]            
-    __RIGHTPAD(0x45524332303a20696e73756666696369656e7420616c6c6f77616e6365)
-    swap2                                       // [value < allowance || allowance == value, msg length, msg, value, from, to] 
+    __ERROR(InsufficientAllowance) swap1
     REQUIRE()
 
     // Update the balances of the sender and recipient.
@@ -357,23 +360,20 @@
 #define macro TRANSFER_TAKE_FROM(error) = takes(3) returns (3) {
     // Ensure that the sender has a sufficient balance.
     // input stack: [value, from, to]
-    dup2                // [from, value, from, to]
+    dup2                                    // [from, value, from, to]
     [BALANCE_POINTER] LOAD_ELEMENT_FROM_KEYS(0x00)  // [balance, value, from, to]
-    dup1                // [balance, balance, value, from, to]
-    dup3                // [value, balance, balance, value, from, to]
-    gt 0x0 eq           // [value>balance, balance, value, from, to]              
-    0x1d                // [msg.len, value>balance, balance, value, from, to]
-    // Check balance              
-    __RIGHTPAD(0x45524332303a20616d6f756e7420657863656564732062616c616e6365)
-    swap2               // [value>balance, msg.len, msg, balance, value, from, to]
-    REQUIRE()
+    dup1                                    // [balance, balance, value, from, to]
+    dup3                                    // [value, balance, balance, value, from, to]
+    gt 0x0 eq                               // [value>balance, balance, value, from, to]
+    __ERROR(AmountExceedsBalance) swap1     // [value>balance, error_selector, balance, value, from, to]
+    REQUIRE()                  // [balance, value, from, to]
 
     // Update the sender's balance.
     // input stack: [balance, value, from, to]
-    dup2                // [value, balance, value, from, to]
-    swap1               // [balance, value, value, from, to]
-    sub                 // [balance - value, value, from, to]
-    dup3                // [from, balance-value, value, from, to]
+    dup2                                    // [value, balance, value, from, to]
+    swap1                                   // [balance, value, value, from, to]
+    sub                                     // [balance - value, value, from, to]
+    dup3                                    // [from, balance-value, value, from, to]
     [BALANCE_POINTER] STORE_ELEMENT_FROM_KEYS(0x00) // [value, from, to]
 }
 
@@ -383,18 +383,17 @@
 #define macro TRANSFER_GIVE_TO() = takes(3) returns (0) { 
     // input stack: [value, from, to]
     // Require to != 0x00
-    __RIGHTPAD(0x45524332303a207472616e7366657220746f207a65726f2061646472657373)
-    0x1f                // [msg.len, msg, to]
-    dup5                // [0x00 != to, msg.len, msg, to]
+    __ERROR(TransferToZeroAddress)  // [error_selector, value, from, to]
+    dup4                            // [to, error_selector, value, from, to]
     REQUIRE()
 
     // Update the balance of the recipient.
-    dup3                // [to, value, from, to]
-    dup2                // [value, to, value, from, to]
-    swap1               // [to, value, value, from, to]
+    dup3                            // [to, value, from, to]
+    dup2                            // [value, to, value, from, to]
+    swap1                           // [to, value, value, from, to]
     [BALANCE_POINTER] LOAD_ELEMENT_FROM_KEYS(0x00)  // [balance, value, value, from, to]
-    add                 // [balance+value, value, from, to]
-    dup4                // [to, balance+value, value, from, to]
+    add                             // [balance+value, value, from, to]
+    dup4                            // [to, balance+value, value, from, to]
     [BALANCE_POINTER] STORE_ELEMENT_FROM_KEYS(0x00) // [value, from, to]
 }
 

@@ -7,8 +7,9 @@ import "forge-std/console.sol";
 import "test/Constants.sol";
 
 import {IERC20} from "../../../src/token/ERC20/IERC20.sol";
+import {ITestERC20} from "../../interfaces/ITestERC20.sol";
 
-contract ERC20 is Test {
+contract ERC20 is Test, ITestERC20 {
     /// @dev Address of the SimpleStore contract.  
     IERC20 public dai;
     address public daiOwner;
@@ -55,13 +56,13 @@ contract ERC20 is Test {
         assertEq(dai.balanceOf(DAI_WHALE), oldSenderBalance - sendValue);
 
         // Test can't send fund to address(0)
-        vm.expectRevert(abi.encode("ERC20: transfer to zero address"));
+        vm.expectRevert(TransferToZeroAddress.selector);
         dai.transfer(address(0), 10);
 
         vm.stopPrank();
 
         // Test transfer more than balance
-        vm.expectRevert(abi.encode("ERC20: amount exceeds balance"));
+        vm.expectRevert(AmountExceedsBalance.selector);
         dai.transfer(DAI_RECEIVER, 10);
     }
 
@@ -81,11 +82,11 @@ contract ERC20 is Test {
         assertEq(dai.balanceOf(DAI_WHALE), oldSenderBalance - sendValue);
 
         // Test can't send fund to address(0)
-        vm.expectRevert(abi.encode("ERC20: transfer to zero address"));
+        vm.expectRevert(TransferToZeroAddress.selector);
         dai.transferFrom(DAI_WHALE, address(0), 10);
 
         // Test can't send fund from address(0)
-        vm.expectRevert(abi.encode("ERC20: insufficient allowance"));
+        vm.expectRevert(InsufficientAllowance.selector);
         dai.transferFrom(address(0), DAI_WHALE, 10);
     }
 

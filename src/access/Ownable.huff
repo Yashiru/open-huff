@@ -5,6 +5,9 @@
 /* Imports */
 #include "../utils/require.huff"
 
+/* Custom errors */
+#define error CallerIsNotTheOwner()
+
 /* Storage */
 #define constant OWNER_POINTER = FREE_STORAGE_POINTER()
 
@@ -29,10 +32,7 @@
 }
 
 #define macro ONLY_OWNER() = takes(0) returns(0) {
-	[OWNER_POINTER] sload caller eq dup1 is_owner jumpi
-        0x20
-        0x4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572
-        swap2
-        REQUIRE()
-	is_owner:
+    __ERROR(CallerIsNotTheOwner)
+	[OWNER_POINTER] sload caller eq
+    REQUIRE()
 }

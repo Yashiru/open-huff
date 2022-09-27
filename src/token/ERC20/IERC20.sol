@@ -1,6 +1,10 @@
 interface IERC20 {
 	event Approval(address, address, uint256);
 	event Transfer(address, address, uint256);
+	error AmountExceedsBalance();
+	error CallerIsNotTheOwner();
+	error InsufficientAllowance();
+	error TransferToZeroAddress();
 	function allowance(address, address) external view returns (uint256);
 	function approve(address, uint256) external returns (bool);
 	function balanceOf(address) external view returns (uint256);
