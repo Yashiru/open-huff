@@ -15,6 +15,12 @@
 /// @dev Emited when the beacon is upgraded
 #define event BeaconUpgraded(address)
 
+/* Custom errors */
+#define error NewImplementationIsNotAContract()
+#define error NewAdminAddressIsZeroAddress()
+#define error NewBeaconIsNotAContract()
+#define error BeaconImplementationIsNotAContract()
+
 /* Events Signatures */
 /// @dev Upgraded(address) event signature
 #define constant UPGRADED_EVENT_SIGNATURE = 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b
@@ -49,10 +55,9 @@
 ///      Input stack: [address]
 #define macro _SET_IMPLEMENTATION() = takes(1) returns(0) {
     // Check if new implementation is a contract
-    0x455243313936373a2061646472657373206973206e6f7420636f6e7472616374
-    0x20                            // [msg.len, msg, address]
-    dup3 IS_CONTRACT()              // [addressCodeSize != 0, msg.len, msg, address]
-    REQUIRE()                       // [address]
+    __ERROR(NewImplementationIsNotAContract)
+    dup2 IS_CONTRACT()              // [addressCodeSize != 0, msg.len, msg, address]
+    REQUIRE()          // [address]
 
     // Store the new implementation address
     [_IMPLEMENTATION_SLOT] sstore   // []
@@ -120,10 +125,9 @@
 ///      Input stack: [address]
 #define macro _SET_ADMIN() = takes(1) returns(0) {
     // Check if new admin is zero address
-    __RIGHTPAD(0x455243313936373a2041646d696e206973207a65726f2061646472657373)
-    0x1e                            // [msg.len, msg, address]
-    dup3                            // [addressCodeSize != 0, msg.len, msg, address]
-    REQUIRE()                       // [address]
+    __ERROR(NewAdminAddressIsZeroAddress)
+    dup2                            // [addressCodeSize != 0, msg.len, msg, address]
+    REQUIRE()          // [address]
 
     // Store new admin address
     [_ADMIN_SLOT] sstore            // []
@@ -165,10 +169,9 @@
 ///      Output stack: [beaconImpAddress]
 #define macro _SET_BEACON() = takes(1) returns(1) {
     // Check if new beacon address is zero address
-    __RIGHTPAD(0x455243313936373a20626561636f6e206e6f74206120636f6e7472616374)
-    0x1e                            // [msg.len, msg, beaconAddress]
-    dup3                            // [beaconCodeSize != 0, msg.len, msg, beaconAddress]
-    REQUIRE()                       // [beaconAddress]
+    __ERROR(NewBeaconIsNotAContract)
+    dup2                            // [beaconCodeSize != 0, msg.len, msg, beaconAddress]
+    REQUIRE()          // [beaconAddress]
 
     // Get the new beacon implementation address in memory
     dup1 0x00 0x00 0x00 0x00 0x20   // [0x20, 0x00, 0x00, 0x00, 0x00, beaconAddress, beaconAddress]
@@ -176,11 +179,9 @@
     call                            // [beaconAddress]
 
     // Check if the new beacon implementation is a contract
+    __ERROR(BeaconImplementationIsNotAContract)
     0x00 mload IS_CONTRACT()        // [isBeaconImpContract, beaconAddress]
-    0x1b                            // [msg.len, isBeaconImpContract, beaconAddress]
-    __RIGHTPAD(0x455243313936373a20696e76616c696420626561636f6e20696d70)
-    swap2                           // [isBeaconImpContract, msg.len, msg, beaconAddress]
-    REQUIRE()                       // [beaconAddress]
+    REQUIRE()          // [beaconAddress]
 
     // Store the new beacon address
     [_BEACON_SLOT] sstore           // []

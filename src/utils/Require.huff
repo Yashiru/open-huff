@@ -1,8 +1,21 @@
-#define macro REQUIRE() = takes (3) returns (0) {
-    // Input stack:          [condition, message_length, message]
+/// @dev Require that revert a custom error
+///         Input stack: [condition, error_selector]
+#define macro REQUIRE() = takes (2) returns (0) {
+    continue jumpi        // [error_selector]
+
+    0x00 mstore           // [error_selector]
+    
+    0x04 0x00 revert
+
+    continue:
+        pop               // []
+}
+/// @dev Require that revert a 32 bytes string
+///         Input stack: [condition, message_length, message]
+#define macro REQUIRE_STRING() = takes (3) returns (0) {
     continue jumpi        // [message_length, message]
 
-    0x20 0x00 mstore
+    0x20 0x00 mstore      // [message_length, message]
     0x20 mstore           // [message]
     0x40 mstore           // []
 
