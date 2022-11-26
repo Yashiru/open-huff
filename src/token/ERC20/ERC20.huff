@@ -326,8 +326,8 @@
 
 /// @dev ERC20 transferFrom from and account to an other
 ///
-///      Expected calldata: `address, uint256` with the recipient first
-///      and the amount in second
+///      Expected calldata: `address, address, uint256` with the sender first,
+///       the recipient in second and the amount in third
 #define macro TRANSFER_FROM() = takes(0) returns(1) {
     // Setup the stack for the transfer function.
     0x24 calldataload                           // [to]

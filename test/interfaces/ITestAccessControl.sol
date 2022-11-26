@@ -1,0 +1,3 @@
+interface ITestAccessControl {
+	error CallerDoseNotHaveRequiredRole();
+}
