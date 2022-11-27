@@ -12,7 +12,7 @@
 ///      ```
 ///      
 ///      Roles can be used to represent a set of permissions. To restrict access to a
-///      function call, use hasRole() in your MAIN jumps:
+///      function call, use HAS_ROLE() in your MAIN jumps:
 ///      
 ///      ```
 ///      jumpDest1:
@@ -24,9 +24,9 @@
 ///         MACRO_THREE()
 ///      ```
 ///      
-///      Roles can be granted and revoked dynamically via the GRANT_ROLE_ROLE and
+///      Roles can be granted and revoked dynamically via the GRANT_ROLE and
 ///      REVOKE_ROLE macros. Each role has an associated admin role, and only
-///      accounts that have a role's admin role can call GRANT_ROLE_ROLE and REVOKE_ROLE.
+///      accounts that have a role's admin role can call GRANT_ROLE and REVOKE_ROLE.
 ///      
 ///      By default, the admin role for all roles is `DEFAULT_ADMIN_ROLE`, which means
 ///      that only accounts with this role will be able to grant or revoke other
@@ -50,12 +50,15 @@
 #define error CallerDoesNotHaveRequiredRole()
 
 /* CONSTRUCTOR */
+/// @dev GRANT the DEFAULT_ADMIN_ROLE to the caller.
+///      ⚠️ This macro should be caller only in the constructor of a child 
+///      contract.
 #define macro ACCESS_CONSTRUCTOR() = takes (0) returns (0) {
     0x01 [DEFAULT_ADMIN_ROLE] caller STORE_ELEMENT_FROM_KEYS(0x00)
 }
 
 /// @dev Macro that checks that the caller has a specific role.
-///      Reverts with a standardized message including the required role.
+///      Reverts with a standardized Error.
 /// @param role The role that the caller must have
 #define macro ONLY_ROLE(role) = takes(1) returns (0) {
     caller
@@ -129,15 +132,16 @@
     REQUIRE()
 }
 
-/// @dev Macro that push onto the stack 0 or 1 depending on if the account 
-///      has a specific role.
+/// @dev Macro that check if an account as the specified role or not.
+///      Push 0 or 1 onto the stack.
 #define macro HAS_ROLE(role) = takes(1) returns (1) {
     // Input stack: [account]
     <role> swap1                    // [account, role]
     LOAD_ELEMENT_FROM_KEYS(0x00)    // [account_has_role]
 }
 
-/// @dev Macro that push onto the the admin role of a role.
+/// @dev Macro that pushes the administrator role of the provided role 
+///      onto the stack.
 #define macro GET_ROLE_ADMIN(role) = takes(0) returns (1) {
     <role>              // [role]
     LOAD_ELEMENT(0x00)  // [role_admin]
