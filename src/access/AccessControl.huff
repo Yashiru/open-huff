@@ -44,7 +44,8 @@
 #define function test() nonpayable returns ()
 
 /// @dev Default admin role
-#define constant DEFAULT_ADMIN_ROLE = 0x01
+///      keccak256("DEFAULT_ADMIN_ROLE")
+#define constant DEFAULT_ADMIN_ROLE = 0x1effbbff9c66c5e59634f24fe842750c60d18891155c32dd155fc2d661a4c86d
 
 /* Custom errors */
 #define error CallerDoesNotHaveRequiredRole()
