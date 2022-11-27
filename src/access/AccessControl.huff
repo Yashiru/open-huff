@@ -1,0 +1,167 @@
+/// @title AccessControl
+/// @author Yashiru <https://github.com/Yashiru>
+/// @dev Contract module that allows children to implement role-based access control
+///      mechanisms.
+///      
+///      Roles are referred to by their `bytes32` identifier. These should be exposed
+///      in the external API and be unique. The best way to achieve this is by
+///      using `constant`:
+///      
+///      ```
+///      #define constant ADMIN_ROLE = 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775
+///      ```
+///      
+///      Roles can be used to represent a set of permissions. To restrict access to a
+///      function call, use HAS_ROLE() in your MAIN jumps:
+///      
+///      ```
+///      jumpDest1:
+///         MACRO_ONE()
+///      jumpDest2:
+///         MACRO_TWO()
+///      jumpDest3:
+///         HAS_ROLE(caller, ADMIN_ROLE)
+///         MACRO_THREE()
+///      ```
+///      
+///      Roles can be granted and revoked dynamically via the GRANT_ROLE and
+///      REVOKE_ROLE macros. Each role has an associated admin role, and only
+///      accounts that have a role's admin role can call GRANT_ROLE and REVOKE_ROLE.
+///      
+///      By default, the admin role for all roles is `DEFAULT_ADMIN_ROLE`, which means
+///      that only accounts with this role will be able to grant or revoke other
+///      roles. More complex role relationships can be created by using
+///      _SET_ROLE_ADMIN.
+///      
+///      WARNING: The `DEFAULT_ADMIN_ROLE` is also its own admin: it has permission to
+///      grant and revoke this role. Extra precautions should be taken to secure
+///      accounts that have been granted it.
+
+/* Imports */
+#include "../utils/Map.huff"
+#include "../utils/Require.huff"
+
+#define function test() nonpayable returns ()
+
+/// @dev Default admin role
+///      keccak256("DEFAULT_ADMIN_ROLE")
+#define constant DEFAULT_ADMIN_ROLE = 0x1effbbff9c66c5e59634f24fe842750c60d18891155c32dd155fc2d661a4c86d
+
+/* Custom errors */
+#define error CallerDoesNotHaveRequiredRole()
+
+/* CONSTRUCTOR */
+/// @dev GRANT the DEFAULT_ADMIN_ROLE to the caller.
+///      ⚠️ This macro should be caller only in the constructor of a child 
+///      contract.
+#define macro ACCESS_CONSTRUCTOR() = takes (0) returns (0) {
+    0x01 [DEFAULT_ADMIN_ROLE] caller STORE_ELEMENT_FROM_KEYS(0x00)
+}
+
+/// @dev Macro that checks that the caller has a specific role.
+///      Reverts with a standardized Error.
+/// @param role The role that the caller must have
+#define macro ONLY_ROLE(role) = takes(1) returns (0) {
+    caller
+    CHECK_ROLE()
+}
+
+/// @dev Macro that grant a role to an account. The caller must be an admin 
+///      of the role to grant.
+///
+/// @param role The role to grant to the target account
+#define macro GRANT_ROLE(role) = takes(1) returns (0) {
+    // Input stack: [account]
+    _GET_ROLE_ADMIN(<role>)         // [role_admin, account]
+    caller                          // [caller, role_admin, account]
+    CHECK_ROLE()                    // [account]
+
+    <role>                          // [role_to_grant, account]
+    0x01                            // [0x01, role_to_grant, account]
+    swap2                           // [account, role_to_grant, 0x01]
+
+    STORE_ELEMENT_FROM_KEYS(0x00)   // []
+} 
+
+/// @dev Macro that revoke a role to an account. The caller must be an admin 
+///      of the role to revoke.
+///
+/// @param role The role to revoke to the target account
+#define macro REVOKE_ROLE(role) = takes(1) returns (0) {
+    // Input stack: [account]
+    _GET_ROLE_ADMIN(<role>)         // [role_admin, account]
+    caller                          // [caller, role_admin, account]
+    CHECK_ROLE()                    // [account]
+
+    <role>                          // [role_to_revoke, account]
+    0x00                            // [0x00, role_to_revoke, account]
+    swap2                           // [account, role_to_revoke, 0x01]
+
+    STORE_ELEMENT_FROM_KEYS(0x00)   // []
+} 
+
+/// @dev Macro that allow caller to renouce his role a role to an account. 
+///      The caller must have the role he want to renounce.
+///
+/// @param role The role the caller want to renounce
+#define macro RENOUNCE_ROLE(role) = takes(1) returns (0) {
+    <role>                          // [role]
+    caller                          // [caller, role]
+    CHECK_ROLE()                    // []
+
+    0x00                            // [0x00]
+    <role>                          // [role, 0x00]
+    caller                          // [caller, role, 0x00]
+
+    STORE_ELEMENT_FROM_KEYS(0x00)   // []
+} 
+
+/// @dev Macro that checks that an account has a specific role.
+///      Reverts with a standardized message including the required role.
+///
+#define macro CHECK_ROLE() = takes(2) returns (0) {
+    /// Input stack: [account, role]
+    dup1 swap2 swap1                    // [account, role, account]
+    LOAD_ELEMENT_FROM_KEYS(0x00)        // [account_has_role, account] 
+    
+    swap1 [DEFAULT_ADMIN_ROLE] swap1    // [account, default_admin_role, account_has_role]
+    LOAD_ELEMENT_FROM_KEYS(0x00)        // [account_is_admin, account_has_role]
+
+    or                                  // [acount_is_admin_or_has_role]
+
+    __ERROR(CallerDoesNotHaveRequiredRole) swap1
+    REQUIRE()
+}
+
+/// @dev Macro that check if an account as the specified role or not.
+///      Push 0 or 1 onto the stack.
+#define macro HAS_ROLE(role) = takes(1) returns (1) {
+    // Input stack: [account]
+    <role> swap1                    // [account, role]
+    LOAD_ELEMENT_FROM_KEYS(0x00)    // [account_has_role]
+}
+
+/// @dev Macro that pushes the administrator role of the provided role 
+///      onto the stack.
+#define macro GET_ROLE_ADMIN(role) = takes(0) returns (1) {
+    <role>              // [role]
+    LOAD_ELEMENT(0x00)  // [role_admin]
+}
+
+/// @dev Macro that push onto the the admin role of a role.
+#define macro SET_ROLE_ADMIN(role) = takes(0) returns (1) {
+    // Input stack: [role_admin]
+    [DEFAULT_ADMIN_ROLE]    // [default_admin_role, role_admin]
+    caller                  // [caller, default_admin_role, role_admin]
+    CHECK_ROLE()            // [, role_admin]
+
+    <role>                  // [role, role_admin]
+    STORE_ELEMENT(0x00)     // []
+}
+
+#define macro MAIN() = takes(0) returns(0) {
+    ACCESS_CONSTRUCTOR()
+    0x654131
+    caller
+    CHECK_ROLE()
+}
