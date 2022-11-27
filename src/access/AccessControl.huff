@@ -72,7 +72,7 @@
 /// @param role The role to grant to the target account
 #define macro GRANT_ROLE(role) = takes(1) returns (0) {
     // Input stack: [account]
-    _GET_ROLE_ADMIN(<role>)           // [role_admin, account]
+    _GET_ROLE_ADMIN(<role>)         // [role_admin, account]
     caller                          // [caller, role_admin, account]
     CHECK_ROLE()                    // [account]
 
@@ -89,7 +89,7 @@
 /// @param role The role to revoke to the target account
 #define macro REVOKE_ROLE(role) = takes(1) returns (0) {
     // Input stack: [account]
-    _GET_ROLE_ADMIN(<role>)           // [role_admin, account]
+    _GET_ROLE_ADMIN(<role>)         // [role_admin, account]
     caller                          // [caller, role_admin, account]
     CHECK_ROLE()                    // [account]
 
